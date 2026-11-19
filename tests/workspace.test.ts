@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { createDemo, runDemo } from '../shared/demo'
-import { aggregate, change, emptyData, isComparable, kstMonth, matchesDomain, monthlyRuns, newCitations, score } from '../shared/workspace'
+import { actionSchema, aggregate, change, emptyData, isComparable, kstMonth, matchesDomain, monthlyRuns, newCitations, score } from '../shared/workspace'
 
 const month = '2026-11'
 const publication = '2026-11-19T05:00:00.000Z'
@@ -38,6 +38,12 @@ describe('GEO Pulse workspace', () => {
     change(data, { type: 'publish', itemId: item.id, url: url + '?utm_source=sample' }, randomUUID(), publication)
     change(data, { type: 'publish', itemId: item.id, url: url + '#steps' }, randomUUID(), after)
     expect(item.publication).toEqual({ url, at: publication, beforeId: item.runId })
+  })
+
+  it('returns validation errors for malformed and non-web publication URLs', () => {
+    for (const invalid of ['not a URL', 'javascript:alert(1)', 'https://user:pass@raum.example']) {
+      expect(actionSchema.safeParse({ type: 'publish', itemId: randomUUID(), url: invalid }).success).toBe(false)
+    }
   })
 
   it('preserves drafts when regenerating and applies only the newest comparable result once', () => {

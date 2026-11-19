@@ -10,6 +10,7 @@ export const brandSchema = z.object({
   competitors: z.array(z.object({ name: label, domain: domain.or(z.literal('')), aliases: z.array(label).max(10) })).max(6),
 })
 export const httpUrl = z.url().max(2048).refine(value => {
+  if (!URL.canParse(value)) return false
   const url = new URL(value)
   return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password
 })
