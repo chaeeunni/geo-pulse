@@ -1,6 +1,5 @@
 <script setup lang="ts">
-if (!import.meta.dev) throw createError({ statusCode: 404, fatal: true })
-useSeoMeta({ title: '로컬 OpenRouter 질문 진단', robots: 'noindex, nofollow' })
+useSeoMeta({ title: 'OpenRouter 질문 진단', robots: 'noindex, nofollow' })
 
 const question = ref('')
 const brand = ref('')
@@ -23,7 +22,7 @@ async function diagnose() {
       error.value = body.data?.message ?? '질문, 브랜드 이름, 공식 도메인을 확인해 주세요.'
     } else result.value = body
   } catch {
-    error.value = '로컬 서버에 연결할 수 없습니다.'
+    error.value = '서버에 연결할 수 없습니다.'
   } finally {
     busy.value = false
   }
@@ -32,7 +31,7 @@ async function diagnose() {
 
 <template>
   <section class="container view-stack" style="padding-block: 2rem">
-    <div class="workspace-heading"><div><h1>로컬 OpenRouter 질문 진단</h1>
+    <div class="workspace-heading"><div><h1>OpenRouter 질문 진단</h1>
       <p>입력한 질문을 Gemini로 보내고 웹 검색 도구를 사용합니다. 모델 호출과 검색에 OpenRouter 크레딧이 사용될 수 있습니다.</p>
     </div></div>
     <form class="panel view-stack" @submit.prevent="diagnose">
@@ -40,7 +39,7 @@ async function diagnose() {
         <legend>진단 정보</legend>
         <div class="form-columns">
           <label>브랜드명<input v-model.trim="brand" required maxlength="120" placeholder="리딩앤" /></label>
-          <label>공식 도메인<input v-model.trim="domain" required placeholder="readingn.com" /></label>
+          <label>공식 도메인<input v-model.trim="domain" required inputmode="url" placeholder="https://www.readingn.com/" /></label>
         </div>
         <label>고객 질문<textarea v-model.trim="question" required minlength="3" maxlength="1000" rows="3" /></label>
       </fieldset>

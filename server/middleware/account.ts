@@ -1,6 +1,13 @@
 export default defineEventHandler(async event => {
   const url = getRequestURL(event)
   const path = url.pathname.replace(/\/$/, '')
+  if (path === '/local-diagnosis') {
+    setResponseHeaders(event, { 'cache-control': 'private, no-store', 'x-robots-tag': 'noindex' })
+    if (!diagnosisOrigin(getHeader(event, 'host') ?? '', import.meta.dev, process.env.VERCEL_ENV, process.env.VERCEL_URL)) {
+      throw createError({ statusCode: 404 })
+    }
+    return
+  }
   if (path !== '/app' && path !== '/billing/result') return
   if (path === '/app' && url.searchParams.get('mode') === 'demo') return
   const client = sessionClient(event)

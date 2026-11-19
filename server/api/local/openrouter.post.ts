@@ -1,10 +1,10 @@
 import { z } from 'zod'
-import { httpUrl, matchesDomain } from '../../../shared/workspace'
+import { brandSchema, httpUrl, matchesDomain } from '../../../shared/workspace'
 
 const input = z.object({
   question: z.string().trim().min(3).max(1000),
   brand: z.string().trim().min(1).max(120),
-  domain: z.string().trim().toLowerCase().regex(/^(?:[a-z0-9-]+\.)+[a-z]{2,63}$/),
+  domain: brandSchema.shape.domain,
 })
 const result = z.object({
   model: z.string().optional(),
@@ -24,17 +24,14 @@ const annotation = z.object({
 })
 
 export default defineEventHandler(async event => {
-  const host = getHeader(event, 'host') ?? ''
-  const origin = getHeader(event, 'origin')
-  if (!import.meta.dev || !/^(localhost|127\.0\.0\.1):\d+$/.test(host)) {
-    throw createError({ statusCode: 404 })
-  }
-  if (origin !== 'http://' + host || getHeader(event, 'content-type')?.split(';')[0] !== 'application/json') {
+  const origin = diagnosisOrigin(getHeader(event, 'host') ?? '', import.meta.dev, process.env.VERCEL_ENV, process.env.VERCEL_URL)
+  if (!origin) throw createError({ statusCode: 404 })
+  if (getHeader(event, 'origin') !== origin || getHeader(event, 'content-type')?.split(';')[0] !== 'application/json') {
     throw createError({ statusCode: 403 })
   }
 
   const { openrouterApiKey, openrouterModel } = useRuntimeConfig(event)
-  if (!openrouterApiKey.trim()) throw createError({ statusCode: 503, data: { message: '로컬 .env에 OpenRouter 키를 설정해 주세요.' } })
+  if (!openrouterApiKey.trim()) throw createError({ statusCode: 503, data: { message: '서버에 OpenRouter 키가 설정되지 않았습니다.' } })
   const { question, brand, domain } = await readValidatedBody(event, input.parse)
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
