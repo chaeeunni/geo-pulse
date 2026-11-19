@@ -1,0 +1,35 @@
+export default defineNuxtConfig({
+  compatibilityDate: '2025-11-19',
+  devtools: { enabled: false },
+  css: ['~/assets/main.css'],
+  app: {
+    head: {
+      htmlAttrs: { lang: 'ko' },
+      titleTemplate: '%s | GEO Pulse',
+      link: [{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
+    },
+  },
+  runtimeConfig: {
+    siteUrl: '',
+    indexPublic: '',
+    supabaseUrl: '',
+    supabasePublishableKey: '',
+    supabaseSecretKey: '',
+    geminiApiKey: '',
+    geminiModel: 'gemini-4-hydrogen',
+    grobleCheckoutUrl: '',
+    grobleProductId: '',
+    grobleOptionId: '',
+    grobleWebhookSecret: '',
+    groblePreviousSecret: '',
+    passPrice: '',
+    passCredits: '',
+    refundTerms: '',
+  },
+  routeRules: {
+    '/app': { headers: { 'x-robots-tag': 'noindex', 'cache-control': 'private, no-store' } },
+    '/login': { headers: { 'x-robots-tag': 'noindex', 'cache-control': 'private, no-store' } },
+    '/billing/**': { headers: { 'x-robots-tag': 'noindex', 'cache-control': 'private, no-store' } },
+    '/api/**': { headers: { 'cache-control': 'private, no-store' } },
+  },
+})
