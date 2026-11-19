@@ -13,7 +13,7 @@ const assessmentSchema = z.object({
 })
 
 type Interaction = {
-  steps?: { type: string; content?: { type: string; text?: string; annotations?: unknown[] }[] }[]
+  steps?: { type: string; content?: { type: string; text?: string; annotations?: unknown[] }[]; arguments?: { queries?: unknown } }[]
 }
 
 export function geminiSettings(event: H3Event) {
@@ -36,7 +36,13 @@ async function interact(settings: ReturnType<typeof geminiSettings>, input: stri
   }
   if (!response.ok) throw new DomainError('Gemini 호출에 실패했습니다. 잠시 후 다시 시도해 주세요.', 502)
   const result = await response.json() as Interaction
-  const blocks = (result.steps ?? []).filter(step => step.type === 'model_output').flatMap(step => step.content ?? [])
+  const steps = result.steps ?? []
+  const searchQueries = [...new Set(steps.flatMap(step => {
+    const queries = step.arguments?.queries
+    return step.type === 'google_search_call' && Array.isArray(queries)
+      ? queries.filter((query): query is string => typeof query === 'string' && !!query.trim()) : []
+  }))]
+  const blocks = steps.filter(step => step.type === 'model_output').flatMap(step => step.content ?? [])
     .filter(block => block.type === 'text' && block.text)
   const answer = blocks.map(block => block.text).join('\n\n')
   if (!answer.trim()) throw new DomainError('Gemini가 읽을 수 있는 답변을 반환하지 않았습니다.', 502)
@@ -46,11 +52,12 @@ async function interact(settings: ReturnType<typeof geminiSettings>, input: stri
       const entry = citationSchema.safeParse(annotation)
       if (!entry.success) continue
       const cite = entry.data
+      if (cite.end_index > block.text!.length) continue
       const quote = block.text!.slice(cite.start_index, cite.end_index)
       if (quote) citations.push({ url: cite.url, title: cite.title || new URL(cite.url).hostname, quote })
     }
   }
-  return { answer, citations }
+  return { answer, citations, searchQueries }
 }
 
 function mentions(text: string, name: string, aliases: string[]) {
@@ -66,7 +73,7 @@ export async function requestGemini(settings: ReturnType<typeof geminiSettings>,
     return { markdown: answer.slice(0, 20000) }
   }
 
-  const { answer, citations } = await interact(settings, '한국어로 고객 질문에 답변하세요.\n\n' + input.question.text, true)
+  const { answer, citations, searchQueries } = await interact(settings, '한국어로 고객 질문에 답변하세요.\n\n' + input.question.text, true)
   const named = [brand, ...brand.competitors]
   let assessment: z.infer<typeof assessmentSchema> | undefined
   try {
@@ -86,7 +93,7 @@ export async function requestGemini(settings: ReturnType<typeof geminiSettings>,
   }))
   const quote = assessment?.quote && answer.includes(assessment.quote) ? assessment.quote : ''
   const run: Run = {
-    id: action.requestId, question: input.question, at, model: settings.model, language: 'ko', search: true, promptVersion: 1,
+    id: action.requestId, question: input.question, at, model: settings.model, language: 'ko', search: true, promptVersion: 1, searchQueries,
     kind: action.type === 'verify' ? 'verification' : 'diagnosis', status: 'success', answer, citations, observations,
     format: assessment?.format ?? '스펙 FAQ',
     evidence: quote ? '“' + quote + '”에서 보강할 공식 자료를 확인해 보세요.' : '확인할 가설 · 공식 자료로 질문에 답할 수 있는지 살펴보세요.',

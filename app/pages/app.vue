@@ -185,7 +185,14 @@ async function createBrand() {
     name: form.name, category: form.category, domain: form.domain, aliases: split(form.aliases),
     competitors: form.competitors.filter(entry => entry.name || entry.domain || entry.aliases).map(entry => ({ ...entry, aliases: split(entry.aliases) })),
   })
-  if (!parse.success) { failure.value = '브랜드명·제품군·공식 도메인과 경쟁사 정보를 확인해 주세요. 도메인은 example.com 형식입니다.'; return }
+  if (!parse.success) {
+    const field = parse.error.issues.find(issue => issue.path.at(-1) === 'domain')?.path
+    failure.value = field
+      ? (field[0] === 'competitors' ? '경쟁사 ' + (Number(field[1]) + 1) + '의 공식 도메인' : '브랜드 공식 도메인') +
+        '을 확인해 주세요. example.com 또는 https://example.com/처럼 입력할 수 있습니다.'
+      : '브랜드명·제품군과 입력한 경쟁사의 이름, 별칭을 확인해 주세요.'
+    return
+  }
   busy.value = true
   try {
     const result = demo ? { id: crypto.randomUUID(), brand: parse.data, data: emptyData() } :
@@ -260,10 +267,10 @@ async function signOut() {
           <div class="panel-heading"><div><h2>브랜드 추가</h2><p>브랜드의 공식 정보와 비교할 경쟁사를 입력하세요.</p></div><button class="icon-button" aria-label="브랜드 추가 닫기" @click="addOpen = false"><X :size="20" /></button></div>
           <form class="inline-form brand-form" @submit.prevent="createBrand">
             <div class="form-columns"><label>브랜드명<input v-model="form.name" required maxlength="120" /></label><label>제품군<input v-model="form.category" required maxlength="120" /></label></div>
-            <div class="form-columns"><label>공식 도메인<input v-model="form.domain" required placeholder="example.com" /></label><label>브랜드 별칭 (선택)<input v-model="form.aliases" placeholder="쉼표로 구분" /></label></div>
+            <div class="form-columns"><label>공식 도메인<input v-model="form.domain" required inputmode="url" placeholder="https://example.com/" /></label><label>브랜드 별칭 (선택)<input v-model="form.aliases" placeholder="쉼표로 구분" /></label></div>
             <fieldset v-for="(entry, i) in form.competitors" :key="i" class="competitor-fields">
               <legend>경쟁사 {{ i + 1 }} (선택)</legend>
-              <label>이름<input v-model="entry.name" /></label><label>공식 도메인<input v-model="entry.domain" placeholder="example.com" /></label><label>별칭<input v-model="entry.aliases" placeholder="쉼표로 구분" /></label>
+              <label>이름<input v-model="entry.name" /></label><label>공식 도메인<input v-model="entry.domain" inputmode="url" placeholder="https://example.com/" /></label><label>별칭<input v-model="entry.aliases" placeholder="쉼표로 구분" /></label>
               <button v-if="form.competitors.length > 1" type="button" class="icon-button" :aria-label="'경쟁사 ' + (i + 1) + ' 제거'" @click="form.competitors.splice(i, 1)"><X :size="18" /></button>
             </fieldset>
             <div class="button-group"><button type="button" class="button secondary" :disabled="form.competitors.length >= 6" @click="form.competitors.push({ name: '', domain: '', aliases: '' })"><Plus :size="16" /> 경쟁사 추가</button><button class="button primary" :disabled="busy">브랜드 저장</button></div>
@@ -271,7 +278,7 @@ async function signOut() {
         </section>
         <template v-if="workspace">
           <WorkspaceDashboard v-if="section.id === 'dashboard'" :key="workspace.id" :workspace="workspace" :month="month" @jump="chartJump" @month="setMonth" />
-          <WorkspaceDiagnosis v-else-if="section.id === 'diagnosis'" :key="workspace.id" :workspace="workspace" :month="month" :selected="selected" :stage="stage" :busy="busy" @action="doAction" @batch="batch" @content="jump('content')" />
+          <WorkspaceDiagnosis v-else-if="section.id === 'diagnosis'" :key="workspace.id" :workspace="workspace" :month="month" :selected="selected" :stage="stage" :busy="busy" :demo="demo" @action="doAction" @batch="batch" @content="jump('content')" />
           <WorkspaceContent v-else-if="section.id === 'content'" :key="workspace.id" :workspace="workspace" :month="month" :selected="selected" :busy="busy" @action="doAction" @jump="jump" />
           <WorkspaceVerification v-else :key="workspace.id" :workspace="workspace" :selected="selected" :busy="busy" @action="doAction" @jump="jump" />
         </template>

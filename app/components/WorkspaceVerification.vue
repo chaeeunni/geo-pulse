@@ -48,11 +48,11 @@ const newId = () => crypto.randomUUID()
         <label v-if="history.length > 1">검증 회차<select v-model="chosen"><option v-for="entry in history" :key="entry.id" :value="entry.id">{{ new Date(requireRun(workspace.data, entry.afterId).at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) }}</option></select></label>
         <div v-if="!comparable" class="notice">비교할 수 있는 동일 조건의 회차가 없어 참고 결과로 표시합니다.</div>
         <div class="verification-summary"><div><small>점수 변화</small><strong>{{ difference == null ? '미산출' : (difference > 0 ? '+' : '') + difference }}</strong></div><div><small>추천 순위 변화</small><strong>{{ rankDifference }}</strong></div><div><small>신규 인용</small><strong>{{ comparable ? sources.length + '건' : '미산출' }}</strong></div></div>
-        <ul v-if="comparable && sources.length" class="citation-list"><li v-for="source in sources" :key="source.url"><a :href="source.url" target="_blank" rel="noopener noreferrer">{{ source.title }}</a><p>{{ source.quote }}</p></li></ul>
+        <ul v-if="comparable && sources.length" class="citation-list"><li v-for="source in sources" :key="source.url"><span v-if="after.model === '샘플 모델'">예시 · {{ source.title }}</span><a v-else :href="source.url" target="_blank" rel="noopener noreferrer">{{ source.title }}</a><p>{{ source.quote }}</p></li></ul>
       </section>
       <div class="compare-grid">
-        <section class="panel"><h3>발행 전 <span v-if="before" class="pill">{{ score(before, name) }} / 3점</span></h3><RunEvidence v-if="before" :run="before" :brand="name" /><p v-else class="muted">기준 회차가 없습니다.</p></section>
-        <section class="panel"><h3>발행 후 <span class="pill">{{ score(after, name) }} / 3점</span></h3><RunEvidence :run="after" :brand="name" /></section>
+        <section class="panel"><h3>발행 전 <span v-if="before" class="pill">{{ score(before, name) }} / 3점</span></h3><RunEvidence v-if="before" :run="before" :brand="name" :domain="workspace.brand.domain" /><p v-else class="muted">기준 회차가 없습니다.</p></section>
+        <section class="panel"><h3>발행 후 <span class="pill">{{ score(after, name) }} / 3점</span></h3><RunEvidence :run="after" :brand="name" :domain="workspace.brand.domain" /></section>
       </div>
     </template>
   </div>

@@ -3,11 +3,16 @@ import { z } from 'zod'
 export const stages = ['탐색', '비교', '결정'] as const
 export const formats = ['비교 매트릭스', '스펙 FAQ', '실사용 리포트', '리뷰 시딩 가이드'] as const
 const label = z.string().trim().min(1).max(120)
-const domain = z.string().trim().toLowerCase().regex(/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9-]{2,63}$/)
+const withoutWww = (hostname: string) => hostname.replace(/^www\./, '')
+const domain = z.string().trim().toLowerCase().transform(value => {
+  if (!/^https?:\/\//.test(value)) return withoutWww(value)
+  const url = URL.parse(value)
+  return url && !url.username && !url.password ? withoutWww(url.hostname) : ''
+}).pipe(z.string().regex(/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9-]{2,63}$/))
 export const brandSchema = z.object({
   name: label, category: label, domain,
   aliases: z.array(label).max(10),
-  competitors: z.array(z.object({ name: label, domain: domain.or(z.literal('')), aliases: z.array(label).max(10) })).max(6),
+  competitors: z.array(z.object({ name: label, domain: z.string().trim().pipe(domain.or(z.literal(''))), aliases: z.array(label).max(10) })).max(6),
 })
 export const httpUrl = z.url().max(2048).refine(value => {
   if (!URL.canParse(value)) return false
@@ -35,6 +40,7 @@ export type Citation = { url: string; title: string; quote: string }
 export type Observation = { name: string; mentioned: boolean; rank: number | null; official: boolean | null }
 export type Run = {
   id: string; question: Question; at: string; model: string; language: string; search: boolean; promptVersion: number
+  searchQueries?: string[]
   status: 'success' | 'error'; answer: string; citations: Citation[]; observations: Observation[]
   format: typeof formats[number]; evidence: string; error?: string; kind: 'diagnosis' | 'verification'
 }
@@ -78,7 +84,8 @@ export function normalizeUrl(value: string) {
 export function matchesDomain(url: string, domain: string) {
   if (!domain) return false
   const host = new URL(url).hostname.toLowerCase()
-  return host === domain || host.endsWith('.' + domain)
+  const officialHost = withoutWww(domain)
+  return host === officialHost || host.endsWith('.' + officialHost)
 }
 export function isComparable(a: Run, b: Run) {
   return a.question.id === b.question.id && a.question.version === b.question.version &&

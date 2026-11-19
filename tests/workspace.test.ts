@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { createDemo, runDemo } from '../shared/demo'
-import { actionSchema, aggregate, change, emptyData, isComparable, kstMonth, matchesDomain, monthlyRuns, newCitations, score } from '../shared/workspace'
+import { actionSchema, aggregate, brandSchema, change, emptyData, isComparable, kstMonth, matchesDomain, monthlyRuns, newCitations, score } from '../shared/workspace'
 
 const month = '2026-11'
 const publication = '2026-11-19T05:00:00.000Z'
@@ -9,6 +9,23 @@ const after = '2026-11-19T05:01:00.000Z'
 const url = 'https://raum.example/report'
 
 describe('GEO Pulse workspace', () => {
+  it('accepts website URLs and bare domains for brand and competitors', () => {
+    const brand = {
+      name: '리딩앤', category: '영어 학습', aliases: [],
+      domain: ' https://www.readingn.com/ ',
+      competitors: [
+        { name: '도도', domain: 'https://gohidodo.com/', aliases: [] },
+        { name: '빈 주소', domain: ' ', aliases: [] },
+      ],
+    }
+    const result = brandSchema.parse(brand)
+    expect(result.domain).toBe('readingn.com')
+    expect(result.competitors.map(entry => entry.domain)).toEqual(['gohidodo.com', ''])
+    expect(brandSchema.parse({ ...brand, domain: 'readingn.com' }).domain).toBe(result.domain)
+    expect(brandSchema.safeParse({ ...brand, domain: 'https://readingn.com@gohidodo.com/' }).success).toBe(false)
+    expect(matchesDomain('https://readingn.com/home', 'www.readingn.com')).toBe(true)
+  })
+
   it('keeps each demo isolated and gives a new workspace an empty state', () => {
     const [first, second] = createDemo(month)
     expect(first!.brand.name).toBe('라움 오디오')

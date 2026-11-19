@@ -17,6 +17,8 @@ export default defineNuxtConfig({
     supabaseSecretKey: '',
     geminiApiKey: '',
     geminiModel: 'gemini-4-hydrogen',
+    openrouterApiKey: '',
+    openrouterModel: 'google/gemini-4-hydrogen',
     grobleCheckoutUrl: '',
     grobleProductId: '',
     grobleOptionId: '',

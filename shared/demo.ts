@@ -25,17 +25,17 @@ function demoRun(brand: Brand, question: Question, id: string, at: string, kind:
   const mentioned = verified || index < 3
   const rank = verified ? 1 : index === 1 ? 1 : index === 2 ? 3 : null
   const official = verified || index === 1 || index === 2
-  const competitor = brand.competitors[0]!
+  const competitor = brand.competitors[0]
   const quote = brand.category === '휴대용 오디오' ? '배터리 시험 조건과 실제 사용 시간을 확인하세요.' : '공유 권한과 변경 이력 관리 기능을 확인하세요.'
   const brandText = mentioned ? (rank === null ? brand.name + '도 확인해 볼 수 있습니다.' : rank + '위. ' + brand.name + '을 추천합니다.') : '이 예시 답변에서는 자사 제품을 확인하지 못했습니다.'
   return {
     id, question: { ...question }, at, model: '샘플 모델', language: 'ko', search: true, promptVersion: 1, kind,
-    status: 'success', answer: brandText + '\n\n' + competitor.name + '도 비교 후보입니다. ' + quote,
-    citations: [{ title: competitor.name + ' 자료', url: 'https://' + competitor.domain + '/guide', quote },
+    status: 'success', answer: brandText + '\n\n' + (competitor ? competitor.name + '도 비교 후보입니다. ' : '') + quote,
+    citations: [...(competitor?.domain ? [{ title: competitor.name + ' 자료', url: 'https://' + competitor.domain + '/guide', quote }] : []),
       ...(official ? [{ title: brand.name + (verified ? ' 실사용 리포트' : ' 제품 가이드'), url: 'https://' + brand.domain + (verified ? '/report' : '/guide'), quote }] : [])],
     observations: [
       { name: brand.name, mentioned, rank, official },
-      ...brand.competitors.map((entry, i) => ({ name: entry.name, mentioned: i === 0, rank: i === 0 && rank !== 1 ? 1 : null, official: i === 0 })),
+      ...brand.competitors.map((entry, i) => ({ name: entry.name, mentioned: i === 0, rank: i === 0 && rank !== 1 ? 1 : null, official: entry.domain ? i === 0 : null })),
     ],
     format: formats[index === 0 ? 2 : index % formats.length]!,
     evidence: quote + ' 확인 가능한 공식 자료를 보강하는 안건입니다.',

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ChevronRight, CircleHelp, Pencil, Plus, Sparkles } from 'lucide-vue-next'
 import { newest, stages, type Action, type Question, type Workspace } from "#shared/workspace"
-const props = defineProps<{ workspace: Workspace; month: string; selected?: string; stage?: string; busy: boolean }>()
+const props = defineProps<{ workspace: Workspace; month: string; selected?: string; stage?: string; busy: boolean; demo: boolean }>()
 const emit = defineEmits<{ action: [action: Action]; batch: [ids: string[]]; content: [] }>()
 const filter = ref(props.stage ?? '')
 const search = ref('')
@@ -44,7 +44,7 @@ function checkAll(event: Event) {
         <div><h2>등록된 질문</h2><p v-if="questions.length">표시된 질문 {{ questions.length }}개 · 선택 {{ selection.length }}개</p></div>
         <div class="button-group">
           <button class="button secondary" :disabled="busy" @click="editQuestion()"><Plus :size="16" /> 질문 추가</button>
-          <button class="button primary" :disabled="busy || !selection.length" @click="emit('batch', selection)"><Sparkles :size="17" /> {{ busy ? '처리 중…' : '실시간 AI 진단' }}</button>
+          <button class="button primary" :disabled="busy || !selection.length" @click="emit('batch', selection)"><Sparkles :size="17" /> {{ busy ? '처리 중…' : demo ? '예시 진단 실행' : '실시간 AI 진단' }}</button>
         </div>
       </div>
       <form v-if="formOpen" class="inline-form" @submit.prevent="save">
@@ -79,7 +79,7 @@ function checkAll(event: Event) {
       <div class="panel-heading"><div><h2>{{ run.question.text }}</h2><p>진단 상세</p></div>
         <button v-if="run.status === 'success'" class="button secondary" :disabled="busy" @click="existing ? emit('content') : emit('action', { type: 'addItem', runId: run.id, month })">{{ existing ? '등록된 안건 보기' : '이번 달 안건으로 등록' }}</button>
       </div>
-      <RunEvidence :run="run" :brand="workspace.brand.name" />
+      <RunEvidence :run="run" :brand="workspace.brand.name" :domain="workspace.brand.domain" />
       <div v-if="run.status === 'success'" class="notice"><strong>{{ run.format }}</strong><p>{{ run.evidence }}</p><p v-if="run.observations.slice(1).some(entry => entry.mentioned)">언급된 경쟁사 · {{ run.observations.slice(1).filter(entry => entry.mentioned).map(entry => entry.name).join(', ') }}</p></div>
     </section>
   </div>
