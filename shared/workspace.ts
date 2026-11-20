@@ -51,7 +51,8 @@ export type Item = {
 export type Verification = { id: string; itemId: string; beforeId: string | null; afterId: string; appliedAt?: string }
 export type WorkspaceData = { questions: Question[]; runs: Run[]; items: Item[]; verifications: Verification[] }
 export type Workspace = { id: string; brand: Brand; data: WorkspaceData }
-export type Pass = { expiresAt: string; remaining: number }
+export type Pass = { expiresAt: string; remaining: number | null }
+export type SubscriptionState = 'active' | 'payment_failed' | 'cancel_scheduled' | 'terminated'
 
 export const emptyData = (): WorkspaceData => ({ questions: [], runs: [], items: [], verifications: [] })
 export const checklist: Record<Run['format'], string[]> = {

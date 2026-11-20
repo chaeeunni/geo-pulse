@@ -24,7 +24,7 @@ export default defineEventHandler(async event => {
       p_action: action, p_input: input, p_model: settings.model,
     })
     if (claimError) throw new DomainError('AI 작업을 시작할 수 없습니다.', 502)
-    if (claim.status === 'no_credit') throw new DomainError('유효한 이용권과 남은 AI 실행 횟수가 필요합니다.', 402)
+  if (claim.status === 'no_credit') throw new DomainError('이 브랜드에서 AI를 실행하려면 이용 가능한 구독 또는 이용권이 필요합니다.', 402)
     if (claim.status === 'busy' || claim.status === 'conflict') {
       throw new DomainError('이 작업이 진행 중이거나 다른 요청에 사용되었습니다.', 409)
     }

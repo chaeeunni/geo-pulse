@@ -19,6 +19,27 @@ export default defineEventHandler(async event => {
   const envelope = eventSchema.safeParse(value)
   if (!envelope.success) throw createError({ statusCode: 400, statusMessage: 'Invalid event' })
   const { id, type, occurredAt, data } = envelope.data
+  if (isSubscriptionNotice(type)) {
+    const parsed = subscriptionNoticeSchema.safeParse({ type, body: data.object })
+    if (!parsed.success) throw createError({ statusCode: 400, statusMessage: 'Invalid subscription event' })
+    const notice = parsed.data
+    const body = notice.body
+    const { error } = await serviceClient(event).rpc('handle_groble_subscription_event', {
+      p_event: id, p_delivery: delivery, p_type: notice.type, p_occurred: occurredAt,
+      p_merchant: body.merchantUid, p_ref: body.sellerReference ?? null, p_product: body.content.id,
+      p_option: body.options[0].optionId, p_amount: body.pricing.finalAmount,
+      p_activated: body.subscription.activatedAt, p_cycle: body.subscription.billingCycleMonths,
+      p_purchased: 'payment' in body ? body.payment.purchasedAt : null,
+      p_round: notice.type === 'subscription_payment.completed' ? notice.body.subscription.currentRound :
+        notice.type === 'subscription_payment.refunded' ? notice.body.subscription.refundedRound : null,
+      p_next: notice.type === 'subscription_payment.completed' ? notice.body.subscription.nextBillingDate : null,
+      p_refund_amount: 'refund' in body ? body.refund.amount : null,
+      p_refunded: 'refund' in body ? body.refund.refundedAt : null,
+      p_terminated: 'termination' in body ? body.termination.terminatedAt : null,
+    })
+    if (error) throw createError({ statusCode: 502, statusMessage: 'Event storage failed' })
+    return { received: true }
+  }
   if (type !== 'payment.completed' && type !== 'payment.refunded') return { received: true }
   const payment = type === 'payment.completed' ? completionSchema.safeParse(data.object) : refundSchema.safeParse(data.object)
   if (!payment.success) throw createError({ statusCode: 400, statusMessage: 'Invalid payment event' })

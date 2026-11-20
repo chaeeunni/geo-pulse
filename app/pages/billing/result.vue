@@ -9,6 +9,7 @@ const labels = {
   pending: ['결제 확인 중', '결제 결과가 아직 도착하지 않았습니다. 잠시 후 상태를 다시 확인해 주세요.'],
   review: ['결제 확인이 필요해요', '주문 정보를 자동으로 확인할 수 없습니다. 구매 내역을 확인해 주세요.'],
   refunded: ['환불이 확인됐어요', '이 거래의 이용권이 회수됐습니다.'],
+  expired: ['이용 기간이 종료됐어요', '결제 기록은 확인됐습니다. 워크스페이스에서 현재 구독 상태를 확인해 주세요.'],
   missing: ['확인할 주문이 없어요', '구매를 진행한 계정으로 로그인했는지 확인해 주세요.'],
 }
 const message = computed(() => labels[state.value as keyof typeof labels] ?? labels.pending)

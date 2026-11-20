@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Activity, ChevronDown, CircleHelp, FileText, FlaskConical, LayoutDashboard, LogOut, Menu, Plus, ScanSearch, X } from 'lucide-vue-next'
-import { actionSchema, brandSchema, change, emptyData, kstMonth, requireRun, type Action, type AiAction, type Pass, type Workspace } from "#shared/workspace"
+import { actionSchema, brandSchema, change, emptyData, kstMonth, requireRun, type Action, type AiAction, type Pass, type SubscriptionState, type Workspace } from "#shared/workspace"
 import { createDemo, runDemo } from "#shared/demo"
 
 definePageMeta({ layout: false, middleware: 'require-account', key: route => route.query.mode === 'demo' ? 'demo' : 'workspace' })
@@ -23,6 +23,13 @@ const active = ref(typeof route.query.workspace === 'string' ? route.query.works
 const workspace = computed(() => workspaces.value.find(entry => entry.id === active.value) ?? workspaces.value[0])
 const account = ref('')
 const pass = ref<Pass | null>(null)
+const subscription = ref<SubscriptionState | null>(null)
+const subscriptionMessage = computed(() => subscription.value && {
+  active: '매월 자동 갱신됩니다. 결제 내역과 해지는 그로블 주문조회에서 관리할 수 있습니다.',
+  payment_failed: '갱신 결제에 실패했습니다. 그로블에서 결제수단과 재시도 상태를 확인해 주세요.',
+  cancel_scheduled: '구독 해지가 예약됐습니다. 결제된 이용 기간까지 사용할 수 있습니다.',
+  terminated: '구독이 종료됐습니다.',
+}[subscription.value])
 const available = ref(false)
 const menu = ref(false)
 const busy = ref(false)
@@ -74,12 +81,21 @@ async function refreshPass(id: string) {
   if (demo) return
   try {
     const data = await $fetch('/api/billing/pass', { query: { workspaceId: id } })
-    if (workspace.value?.id === id) pass.value = data.pass
-  } catch { if (workspace.value?.id === id) pass.value = null }
+    if (workspace.value?.id === id) {
+      pass.value = data.pass
+      subscription.value = data.subscription
+    }
+  } catch {
+    if (workspace.value?.id === id) {
+      pass.value = null
+      subscription.value = null
+    }
+  }
 }
 if (import.meta.client) onMounted(() => { if (workspace.value) void refreshPass(workspace.value.id) })
 watch(() => workspace.value?.id, id => {
   pass.value = null
+  subscription.value = null
   pendingAi.value = null
   if (id && import.meta.client) void refreshPass(id)
 })
@@ -257,9 +273,14 @@ async function signOut() {
           <div><span v-if="demo" class="sample-label"><i /> 예시 데이터</span><h1>{{ section.label }}</h1><p>{{ section.description }}</p></div>
           <label v-if="workspace && (section.id === 'dashboard' || section.id === 'content')" class="month-label">조회 월<input :value="month" type="month" aria-label="조회 월" @change="setMonth(($event.target as HTMLInputElement).value)" /></label>
         </div>
-        <section v-if="!demo && workspace && (route.query.purchase === '1' || pass)" class="panel pass-panel">
-          <div><h2>{{ pass ? '30일 이용권' : '선택한 브랜드의 이용권' }}</h2><p v-if="pass">{{ new Date(pass.expiresAt).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }) }} 만료 · AI 실행 {{ pass.remaining }}회 남음</p><p v-else>{{ workspace.brand.name }}에 30일 이용권이 적용됩니다.</p></div>
-          <button v-if="available" class="button primary" :disabled="busy" @click="purchase">이 브랜드 이용권 구매</button>
+        <section v-if="!demo && workspace && (route.query.purchase === '1' || pass || subscription)" class="panel pass-panel">
+          <div>
+            <h2>{{ pass?.remaining != null ? '이용권' : '브랜드 월 구독' }}</h2>
+            <p v-if="pass">{{ new Date(pass.expiresAt).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }) }} 만료 · {{ pass.remaining === null ? 'AI 무제한 실행' : 'AI 실행 ' + pass.remaining + '회 남음' }}</p>
+            <p v-else>{{ workspace.brand.name }}에 사용 가능한 이용권이 없습니다.</p>
+            <p v-if="subscriptionMessage">{{ subscriptionMessage }}</p>
+          </div>
+          <button v-if="available && (!subscription || subscription === 'terminated')" class="button primary" :disabled="busy" @click="purchase">이 브랜드 월 구독 시작</button>
         </section>
         <div v-if="notice" class="notice page-notice" role="status">{{ notice }}</div>
         <div v-if="failure" class="notice danger page-notice" role="alert">{{ failure }} <button v-if="pendingAi" class="text-button" :disabled="busy" @click="doAction(pendingAi)">같은 요청 다시 확인</button></div>
